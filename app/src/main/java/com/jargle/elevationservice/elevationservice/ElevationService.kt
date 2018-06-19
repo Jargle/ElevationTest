@@ -17,7 +17,7 @@ class ElevationService : Service(), LocationListener{
     private var myLocation : Location? = null
     private var locationManager: LocationManager? = null
 
-    private val LOCATION_UPDATE_TIME = TimeUnit.SECONDS.toMillis(3)
+    private val LOCATION_UPDATE_TIME = TimeUnit.SECONDS.toMillis(5)
 
     override fun onBind(p0: Intent?): IBinder? {
         return null
