@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">ElevationService</string>
+    <string name="app_name">Elevation Background Service</string>
+    <string name="main_start_service_description">Click the button to start the background service!</string>
+    <string name="main_start_service">Start Service</string>
 </resources>
