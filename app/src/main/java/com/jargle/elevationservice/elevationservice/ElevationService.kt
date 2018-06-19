@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit
 private const val TAG = "ElevationService"
 private val LOCATION_UPDATE_TIME = TimeUnit.SECONDS.toMillis(5)
 private val df = DecimalFormat()
-private val simpleDateFormat = SimpleDateFormat(" HH:mm:ss", Locale.US)
-private const val SHUTDOWN_ACTION = "com.jargle.shutdownservice"
+private val simpleDateFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+private const val SHUTDOWN_ACTION = "com.jargle.elevationservice.shutdownservice"
 
 class ElevationService : Service(), LocationListener {
 
@@ -32,54 +32,24 @@ class ElevationService : Service(), LocationListener {
     }
 
     private var myLocation: Location? = null
-    private var locationManager: LocationManager? = null
+    private lateinit var locationManager: LocationManager
 
     override fun onBind(p0: Intent?): IBinder? = null
-
-    override fun onCreate() {
-        super.onCreate()
-        if (locationManager == null) {
-            locationManager = applicationContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
-        }
-
-        notificationBuilder = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            @Suppress("DEPRECATION")
-            NotificationCompat.Builder(this)
-        } else {
-            val channelId = "my_service"
-            val channelName = "My Background Service"
-            val chan = NotificationChannel(channelId,
-                    channelName, NotificationManager.IMPORTANCE_NONE)
-            chan.lightColor = Color.BLUE
-            chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
-            val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            service.createNotificationChannel(chan)
-            NotificationCompat.Builder(this, channelId)
-        }
-
-        try {
-            locationManager!!.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                    LOCATION_UPDATE_TIME, 0f, this)
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Fail to request location update", e)
-        } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "Network provider does not exist", e)
-        }
-    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
         if (SHUTDOWN_ACTION == intent?.action ?: "") {
             stopForeground(true)
+            stopSelf()
         } else {
 
             val notificationIntent = Intent(this, ElevationService::class.java)
             notificationIntent.action = SHUTDOWN_ACTION
             val pendingIntent = PendingIntent.getService(this, 0,
-                    notificationIntent, 0)
+                    notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT)
 
             notificationBuilder.setContentTitle("Elevation")
-                    .setTicker("Elevation")
+                    .setTicker("Elevation - Click to stop service")
                     .setContentText("Elevation loading")
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
                     .setContentIntent(pendingIntent)
@@ -88,6 +58,41 @@ class ElevationService : Service(), LocationListener {
             startForeground(100, notificationBuilder.build())
         }
         return START_STICKY
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        locationManager = applicationContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+        notificationBuilder =
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                    @Suppress("DEPRECATION")
+                    NotificationCompat.Builder(this)
+                } else {
+                    val channelId = "my_service"
+                    val channelName = "My Background Service"
+                    val chan = NotificationChannel(channelId, channelName,
+                            NotificationManager.IMPORTANCE_NONE)
+                    chan.lightColor = Color.BLUE
+                    chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+                    val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    service.createNotificationChannel(chan)
+                    NotificationCompat.Builder(this, channelId)
+                }
+
+        try {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                    LOCATION_UPDATE_TIME, 0f, this)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Fail to request location update", e)
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "Network provider does not exist", e)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        locationManager.removeUpdates(this)
     }
 
     override fun onLocationChanged(p0: Location?) {
