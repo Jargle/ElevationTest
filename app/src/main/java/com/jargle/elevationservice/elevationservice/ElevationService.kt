@@ -10,9 +10,15 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
+import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 
 class ElevationService : Service(), LocationListener{
+
+    private val df = DecimalFormat()
+    init {
+        df.maximumFractionDigits = 5
+    }
 
     private var myLocation : Location? = null
     private var locationManager: LocationManager? = null
@@ -43,7 +49,7 @@ class ElevationService : Service(), LocationListener{
 
     override fun onLocationChanged(p0: Location?) {
         myLocation = p0
-        Toast.makeText(this, "New elevation: " + myLocation?.altitude, Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "New elevation: " + df.format(myLocation?.altitude), Toast.LENGTH_SHORT).show()
     }
 
     override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {

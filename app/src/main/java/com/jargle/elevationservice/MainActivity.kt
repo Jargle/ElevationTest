@@ -40,8 +40,6 @@ class MainActivity : AppCompatActivity() , View.OnClickListener{
         when(requestCode) {
             1 -> {
                 startElevtionService()
-            } else -> {
-
             }
         }
     }
