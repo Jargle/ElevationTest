@@ -1,40 +1,60 @@
 package com.jargle.elevationservice.elevationservice
 
-import android.app.Service
+import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.support.v4.app.NotificationCompat
 import android.util.Log
-import android.widget.Toast
+import com.jargle.elevationservice.R
 import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 
-class ElevationService : Service(), LocationListener{
+private const val TAG = "ElevationService"
+private val LOCATION_UPDATE_TIME = TimeUnit.SECONDS.toMillis(5)
+private val df = DecimalFormat()
+private val simpleDateFormat = SimpleDateFormat(" HH:mm:ss", Locale.US)
+private const val SHUTDOWN_ACTION = "com.jargle.shutdownservice"
 
-    private val df = DecimalFormat()
+class ElevationService : Service(), LocationListener {
+
+    private lateinit var notificationBuilder: NotificationCompat.Builder
     init {
-        df.maximumFractionDigits = 5
+        df.maximumFractionDigits = 2
     }
 
-    private var myLocation : Location? = null
+    private var myLocation: Location? = null
     private var locationManager: LocationManager? = null
 
-    private val LOCATION_UPDATE_TIME = TimeUnit.SECONDS.toMillis(5)
-
-    override fun onBind(p0: Intent?): IBinder? {
-        return null
-    }
-
-    private val TAG: String = "ElevationService"
+    override fun onBind(p0: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         if (locationManager == null) {
             locationManager = applicationContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
+        }
+
+        notificationBuilder = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            @Suppress("DEPRECATION")
+            NotificationCompat.Builder(this)
+        } else {
+            val channelId = "my_service"
+            val channelName = "My Background Service"
+            val chan = NotificationChannel(channelId,
+                    channelName, NotificationManager.IMPORTANCE_NONE)
+            chan.lightColor = Color.BLUE
+            chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+            val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            service.createNotificationChannel(chan)
+            NotificationCompat.Builder(this, channelId)
         }
 
         try {
@@ -47,9 +67,36 @@ class ElevationService : Service(), LocationListener{
         }
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
+        if (SHUTDOWN_ACTION == intent?.action ?: "") {
+            stopForeground(true)
+        } else {
+
+            val notificationIntent = Intent(this, ElevationService::class.java)
+            notificationIntent.action = SHUTDOWN_ACTION
+            val pendingIntent = PendingIntent.getService(this, 0,
+                    notificationIntent, 0)
+
+            notificationBuilder.setContentTitle("Elevation")
+                    .setTicker("Elevation")
+                    .setContentText("Elevation loading")
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentIntent(pendingIntent)
+                    .setOngoing(true)
+
+            startForeground(100, notificationBuilder.build())
+        }
+        return START_STICKY
+    }
+
     override fun onLocationChanged(p0: Location?) {
         myLocation = p0
-        Toast.makeText(this, "New elevation: " + df.format(myLocation?.altitude), Toast.LENGTH_SHORT).show()
+        val formattedElevation = df.format(myLocation?.altitude)
+        val date = simpleDateFormat.format(Date(myLocation?.time ?: 0L))
+        notificationBuilder.setContentText("New elevation: $formattedElevation at $date")
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(100, notificationBuilder.build())
     }
 
     override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {

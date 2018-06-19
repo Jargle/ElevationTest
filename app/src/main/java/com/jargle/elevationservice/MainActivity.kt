@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() , View.OnClickListener{
     }
 
     // Used to lazily bind the button.
-    fun <T : View> Activity.bind(@IdRes res : Int) : Lazy<T> {
+    private fun <T : View> Activity.bind(@IdRes res : Int) : Lazy<T> {
         @Suppress("UNCHECKED_CAST")
         return lazy(LazyThreadSafetyMode.NONE){findViewById<T>(res)}
     }
