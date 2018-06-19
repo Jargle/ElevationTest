@@ -6,7 +6,12 @@ import android.os.IBinder
 
 class ElevationService : Service() {
 
-    override fun onBind(p0: Intent?): IBinder {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun onBind(p0: Intent?): IBinder? {
+        return null
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+
     }
 }
